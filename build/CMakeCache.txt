@@ -216,15 +216,6 @@ Eigen3_DIR:PATH=/usr/share/eigen3/cmake
 OpenCV_DIR:PATH=/usr/local/lib/cmake/opencv4
 
 //Value Computed by CMake
-yolo_obb_BINARY_DIR:STATIC=/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/build
-
-//Value Computed by CMake
-yolo_obb_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-yolo_obb_SOURCE_DIR:STATIC=/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track
-
-//Value Computed by CMake
 yolo_obb_track_BINARY_DIR:STATIC=/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/build
 
 //Value Computed by CMake
