@@ -145,7 +145,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=yolo_obb
+CMAKE_PROJECT_NAME:STATIC=yolo_obb_track
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -223,6 +223,15 @@ yolo_obb_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 yolo_obb_SOURCE_DIR:STATIC=/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track
+
+//Value Computed by CMake
+yolo_obb_track_BINARY_DIR:STATIC=/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/build
+
+//Value Computed by CMake
+yolo_obb_track_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+yolo_obb_track_SOURCE_DIR:STATIC=/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track
 
 
 ########################

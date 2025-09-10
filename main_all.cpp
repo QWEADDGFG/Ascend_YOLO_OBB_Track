@@ -208,8 +208,8 @@ int main(int argc, char** argv)
     // track_id -> last associated OBB (用于绘制 OBB 时引用)
     std::map<int, OBBBoundingBox> trackid2obb;
 
-    // ensure results dir
-    std::filesystem::create_directories("../results");
+    // // ensure results dir
+    // std::filesystem::create_directories("../results");
 
     // 遍历图像序列：从 000001.jpg 开始，向上查找直到没有文件（连续编号或中断停止）
     // 支持任意数量图片（例如 000001.jpg .. 000413.jpg 甚至更多）
@@ -313,7 +313,7 @@ int main(int argc, char** argv)
                     cv::Point(0, 30), 0, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
 
         // 保存结果图像
-        std::string outPath = str_format("../results/%06d.jpg", no);
+        std::string outPath = str_format("../output_obb_track/%06d.jpg", no);
         cv::imwrite(outPath, img);
 
         ++no;

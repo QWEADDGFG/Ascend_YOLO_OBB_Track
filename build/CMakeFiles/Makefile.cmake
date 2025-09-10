@@ -52,5 +52,5 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
-  "CMakeFiles/yolo_obb.dir/DependInfo.cmake"
+  "CMakeFiles/yolo_obb_track.dir/DependInfo.cmake"
   )

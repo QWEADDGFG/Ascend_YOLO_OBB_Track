@@ -117,24 +117,24 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named yolo_obb
+# Target rules for targets named yolo_obb_track
 
 # Build rule for target.
-yolo_obb: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 yolo_obb
-.PHONY : yolo_obb
+yolo_obb_track: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 yolo_obb_track
+.PHONY : yolo_obb_track
 
 # fast build rule for target.
-yolo_obb/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/build
-.PHONY : yolo_obb/fast
+yolo_obb_track/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/build
+.PHONY : yolo_obb_track/fast
 
 main_all.o: main_all.cpp.o
 .PHONY : main_all.o
 
 # target to build an object file
 main_all.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/main_all.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/main_all.cpp.o
 .PHONY : main_all.cpp.o
 
 main_all.i: main_all.cpp.i
@@ -142,7 +142,7 @@ main_all.i: main_all.cpp.i
 
 # target to preprocess a source file
 main_all.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/main_all.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/main_all.cpp.i
 .PHONY : main_all.cpp.i
 
 main_all.s: main_all.cpp.s
@@ -150,7 +150,7 @@ main_all.s: main_all.cpp.s
 
 # target to generate assembly for a file
 main_all.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/main_all.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/main_all.cpp.s
 .PHONY : main_all.cpp.s
 
 src/BYTETracker.o: src/BYTETracker.cpp.o
@@ -158,7 +158,7 @@ src/BYTETracker.o: src/BYTETracker.cpp.o
 
 # target to build an object file
 src/BYTETracker.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/BYTETracker.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/BYTETracker.cpp.o
 .PHONY : src/BYTETracker.cpp.o
 
 src/BYTETracker.i: src/BYTETracker.cpp.i
@@ -166,7 +166,7 @@ src/BYTETracker.i: src/BYTETracker.cpp.i
 
 # target to preprocess a source file
 src/BYTETracker.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/BYTETracker.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/BYTETracker.cpp.i
 .PHONY : src/BYTETracker.cpp.i
 
 src/BYTETracker.s: src/BYTETracker.cpp.s
@@ -174,7 +174,7 @@ src/BYTETracker.s: src/BYTETracker.cpp.s
 
 # target to generate assembly for a file
 src/BYTETracker.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/BYTETracker.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/BYTETracker.cpp.s
 .PHONY : src/BYTETracker.cpp.s
 
 src/STrack.o: src/STrack.cpp.o
@@ -182,7 +182,7 @@ src/STrack.o: src/STrack.cpp.o
 
 # target to build an object file
 src/STrack.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/STrack.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/STrack.cpp.o
 .PHONY : src/STrack.cpp.o
 
 src/STrack.i: src/STrack.cpp.i
@@ -190,7 +190,7 @@ src/STrack.i: src/STrack.cpp.i
 
 # target to preprocess a source file
 src/STrack.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/STrack.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/STrack.cpp.i
 .PHONY : src/STrack.cpp.i
 
 src/STrack.s: src/STrack.cpp.s
@@ -198,7 +198,7 @@ src/STrack.s: src/STrack.cpp.s
 
 # target to generate assembly for a file
 src/STrack.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/STrack.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/STrack.cpp.s
 .PHONY : src/STrack.cpp.s
 
 src/kalmanFilter.o: src/kalmanFilter.cpp.o
@@ -206,7 +206,7 @@ src/kalmanFilter.o: src/kalmanFilter.cpp.o
 
 # target to build an object file
 src/kalmanFilter.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/kalmanFilter.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/kalmanFilter.cpp.o
 .PHONY : src/kalmanFilter.cpp.o
 
 src/kalmanFilter.i: src/kalmanFilter.cpp.i
@@ -214,7 +214,7 @@ src/kalmanFilter.i: src/kalmanFilter.cpp.i
 
 # target to preprocess a source file
 src/kalmanFilter.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/kalmanFilter.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/kalmanFilter.cpp.i
 .PHONY : src/kalmanFilter.cpp.i
 
 src/kalmanFilter.s: src/kalmanFilter.cpp.s
@@ -222,7 +222,7 @@ src/kalmanFilter.s: src/kalmanFilter.cpp.s
 
 # target to generate assembly for a file
 src/kalmanFilter.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/kalmanFilter.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/kalmanFilter.cpp.s
 .PHONY : src/kalmanFilter.cpp.s
 
 src/lapjv.o: src/lapjv.cpp.o
@@ -230,7 +230,7 @@ src/lapjv.o: src/lapjv.cpp.o
 
 # target to build an object file
 src/lapjv.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/lapjv.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/lapjv.cpp.o
 .PHONY : src/lapjv.cpp.o
 
 src/lapjv.i: src/lapjv.cpp.i
@@ -238,7 +238,7 @@ src/lapjv.i: src/lapjv.cpp.i
 
 # target to preprocess a source file
 src/lapjv.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/lapjv.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/lapjv.cpp.i
 .PHONY : src/lapjv.cpp.i
 
 src/lapjv.s: src/lapjv.cpp.s
@@ -246,7 +246,7 @@ src/lapjv.s: src/lapjv.cpp.s
 
 # target to generate assembly for a file
 src/lapjv.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/lapjv.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/lapjv.cpp.s
 .PHONY : src/lapjv.cpp.s
 
 src/utils.o: src/utils.cpp.o
@@ -254,7 +254,7 @@ src/utils.o: src/utils.cpp.o
 
 # target to build an object file
 src/utils.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/utils.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/utils.cpp.o
 .PHONY : src/utils.cpp.o
 
 src/utils.i: src/utils.cpp.i
@@ -262,7 +262,7 @@ src/utils.i: src/utils.cpp.i
 
 # target to preprocess a source file
 src/utils.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/utils.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/utils.cpp.i
 .PHONY : src/utils.cpp.i
 
 src/utils.s: src/utils.cpp.s
@@ -270,7 +270,7 @@ src/utils.s: src/utils.cpp.s
 
 # target to generate assembly for a file
 src/utils.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/utils.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/utils.cpp.s
 .PHONY : src/utils.cpp.s
 
 src/yolo_obb.o: src/yolo_obb.cpp.o
@@ -278,7 +278,7 @@ src/yolo_obb.o: src/yolo_obb.cpp.o
 
 # target to build an object file
 src/yolo_obb.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/yolo_obb.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/yolo_obb.cpp.o
 .PHONY : src/yolo_obb.cpp.o
 
 src/yolo_obb.i: src/yolo_obb.cpp.i
@@ -286,7 +286,7 @@ src/yolo_obb.i: src/yolo_obb.cpp.i
 
 # target to preprocess a source file
 src/yolo_obb.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/yolo_obb.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/yolo_obb.cpp.i
 .PHONY : src/yolo_obb.cpp.i
 
 src/yolo_obb.s: src/yolo_obb.cpp.s
@@ -294,7 +294,7 @@ src/yolo_obb.s: src/yolo_obb.cpp.s
 
 # target to generate assembly for a file
 src/yolo_obb.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/yolo_obb.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/yolo_obb.cpp.s
 .PHONY : src/yolo_obb.cpp.s
 
 src/yolov8.o: src/yolov8.cpp.o
@@ -302,7 +302,7 @@ src/yolov8.o: src/yolov8.cpp.o
 
 # target to build an object file
 src/yolov8.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/yolov8.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/yolov8.cpp.o
 .PHONY : src/yolov8.cpp.o
 
 src/yolov8.i: src/yolov8.cpp.i
@@ -310,7 +310,7 @@ src/yolov8.i: src/yolov8.cpp.i
 
 # target to preprocess a source file
 src/yolov8.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/yolov8.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/yolov8.cpp.i
 .PHONY : src/yolov8.cpp.i
 
 src/yolov8.s: src/yolov8.cpp.s
@@ -318,7 +318,7 @@ src/yolov8.s: src/yolov8.cpp.s
 
 # target to generate assembly for a file
 src/yolov8.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb.dir/build.make CMakeFiles/yolo_obb.dir/src/yolov8.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/yolo_obb_track.dir/build.make CMakeFiles/yolo_obb_track.dir/src/yolov8.cpp.s
 .PHONY : src/yolov8.cpp.s
 
 # Help Target
@@ -329,7 +329,7 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... yolo_obb"
+	@echo "... yolo_obb_track"
 	@echo "... main_all.o"
 	@echo "... main_all.i"
 	@echo "... main_all.s"

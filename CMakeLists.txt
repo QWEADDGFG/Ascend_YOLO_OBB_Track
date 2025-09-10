@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required(VERSION 3.10)
-project(yolo_obb)
+project(yolo_obb_track)
 
 add_definitions(-DENABLE_DVPP_INTERFACE)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2")
