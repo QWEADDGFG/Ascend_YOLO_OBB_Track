@@ -21,6 +21,7 @@ exec >> "$LOGFILE" 2>&1
 # 推理阶段
 echo "[INFO] 开始推理..."
 cd ./build
+
 # ./yolo_obb_track detect \
 #     --model ../model/YOLO11s_obb_video_base_640.om \
 #     --input  /home/HwHiAiUser/gp/DATASETS/test0909/imgs_640/000001.jpg \
