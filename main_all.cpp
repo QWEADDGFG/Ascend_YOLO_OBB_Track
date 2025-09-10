@@ -1,94 +1,85 @@
+// main_all.cpp
 #include <iostream>
 #include <iomanip>
 #include <filesystem>
 #include <fstream>
-#include <random>
 #include <vector>
 #include <chrono>
-#include <map>
 #include <memory>
 #include <string>
 
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/opencv.hpp>
-#include <float.h>
-#include <stdio.h>
 
+// ========== 1. 外部头文件 ==========
 #include "BYTETracker.h"
-// 用 yolo_obb.h 替换 yolov8.h
 #include "yolo_obb.h"
+// ==================================
 
-// 简单包装 YOLOOBBInference 以便初始化与单张图片推理
-class YoloOBBWrapper {
+namespace fs = std::filesystem;
+using std::chrono::steady_clock;
+using std::chrono::microseconds;
+using std::chrono::duration_cast;
+
+/* ----------------------------------------------------------
+ * 通用
+ * ---------------------------------------------------------- */
+template<typename... Args>
+static std::string str_format(const std::string& fmt, Args... args)
+{
+    int sz = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1;
+    std::unique_ptr<char[]> buf(new (std::nothrow) char[sz]);
+    if (!buf) return "";
+    std::snprintf(buf.get(), sz, fmt.c_str(), args...);
+    return std::string(buf.get(), buf.get() + sz - 1);
+}
+
+/* ----------------------------------------------------------
+ * YoloOBB 封装
+ * ---------------------------------------------------------- */
+class YoloOBBWrapper
+{
 public:
-    YoloOBBWrapper(const InferenceConfig &cfg) : cfg_(cfg), inference_(cfg_) {}
+    YoloOBBWrapper(const InferenceConfig& cfg) : cfg_(cfg), inference_(cfg_) {}
+    bool Init() { return inference_.initialize(); }
 
-    bool Init() {
-        return inference_.initialize();
-    }
-
-    // 对单张图片进行推理，返回 OBB 列表（filter 后、NMS 后）以及同时生成的 Object 列表（AABB）
-    bool Detect(const std::string &imagePath,
-                std::vector<OBBBoundingBox> &outOBBs,
-                std::vector<Object> &outObjects)
+    // 纯检测接口：返回 OBB 和 AABB（Object）
+    bool Detect(const std::string& imagePath,
+                std::vector<OBBBoundingBox>& outOBBs,
+                std::vector<Object>& outObjects)
     {
-        // 使用 YOLOOBBInference 的 preprocess/run/postprocess 分步接口（按 yolo_obb.h 假定提供）
-        if (!inference_.preprocessImage(imagePath)) {
-            ACLLITE_LOG_ERROR("yolo_obb preprocessImage failed for %s", imagePath.c_str());
-            return false;
-        }
+        if (!inference_.preprocessImage(imagePath)) return false;
+        std::vector<InferenceOutput> outs;
+        if (!inference_.runModelInference(outs)) return false;
 
-        std::vector<InferenceOutput> inferOutputs;
-        if (!inference_.runModelInference(inferOutputs)) {
-            ACLLITE_LOG_ERROR("yolo_obb runModelInference failed for %s", imagePath.c_str());
-            return false;
-        }
+        cv::Mat src = cv::imread(imagePath);
+        if (src.empty()) return false;
 
-        // 读取源图像以获得尺寸
-        cv::Mat srcImage = cv::imread(imagePath);
-        if (srcImage.empty()) {
-            ACLLITE_LOG_ERROR("Cannot read source image: %s", imagePath.c_str());
-            return false;
-        }
+        float* ptr = static_cast<float*>(outs[0].data.get());
+        OBBPostProcessor post(cfg_.modelOutputBoxNum, cfg_.classNum);
+        auto boxes = post.parseOutput(ptr, outs[0].size,
+                                      src.cols, src.rows,
+                                      cfg_.modelWidth, cfg_.modelHeight,
+                                      cfg_.confidenceThreshold);
+        outOBBs = OBBNMSProcessor::applyNMS(boxes, cfg_.nmsThreshold);
 
-        float *outputData = static_cast<float *>(inferOutputs[0].data.get());
-
-        // 使用推理器内部的 postProcessor_：为了避免修改原库，这里使用本地的 OBBPostProcessor（假设构造签名匹配）
-        OBBPostProcessor localPost(cfg_.modelOutputBoxNum, cfg_.classNum);
-
-        std::vector<OBBBoundingBox> boxes = localPost.parseOutput(
-            outputData, inferOutputs[0].size,
-            srcImage.cols, srcImage.rows,
-            cfg_.modelWidth, cfg_.modelHeight,
-            cfg_.confidenceThreshold);
-
-        std::vector<OBBBoundingBox> finalBoxes = OBBNMSProcessor::applyNMS(boxes, cfg_.nmsThreshold);
-
-        // 返回 finalBoxes，同时转换为 Object (AABB)
-        outOBBs = finalBoxes;
         outObjects.clear();
-        for (const auto &obb : finalBoxes) {
-            // convert to AABB (axis-aligned bounding box)
-            std::vector<cv::Point2f> pts = obb.getCornerPoints();
-            float xmin = pts[0].x, ymin = pts[0].y, xmax = pts[0].x, ymax = pts[0].y;
-            for (int k = 1; k < 4; ++k) {
-                xmin = std::min(xmin, pts[k].x);
-                ymin = std::min(ymin, pts[k].y);
-                xmax = std::max(xmax, pts[k].x);
-                ymax = std::max(ymax, pts[k].y);
+        for (const auto& obb : outOBBs)
+        {
+            auto pts = obb.getCornerPoints();
+            float xmi = pts[0].x, ymi = pts[0].y, xma = pts[0].x, yma = pts[0].y;
+            for (int k = 1; k < 4; ++k)
+            {
+                xmi = std::min(xmi, pts[k].x); ymi = std::min(ymi, pts[k].y);
+                xma = std::max(xma, pts[k].x); yma = std::max(yma, pts[k].y);
             }
             Object obj;
             obj.label = static_cast<int>(obb.classIndex);
-            obj.prob = obb.confidence;
-            obj.rect.x = xmin;
-            obj.rect.y = ymin;
-            obj.rect.width = xmax - xmin;
-            obj.rect.height = ymax - ymin;
+            obj.prob  = obb.confidence;
+            obj.rect.x = xmi; obj.rect.y = ymi;
+            obj.rect.width  = xma - xmi;
+            obj.rect.height = yma - ymi;
             outObjects.push_back(obj);
         }
-
         return true;
     }
 
@@ -97,230 +88,308 @@ private:
     YOLOOBBInference inference_;
 };
 
-// 格式化字符串工具（保留你的 str_format）
-template<typename ... Args>
-static std::string str_format(const std::string& format, Args ... args)
+/* ----------------------------------------------------------
+ * 绘制 OBB
+ * ---------------------------------------------------------- */
+static void drawOBB(cv::Mat& img, const OBBBoundingBox& obb,
+                    const cv::Scalar& color, const std::string& text = "")
 {
-    auto size_buf = std::snprintf(nullptr, 0, format.c_str(), args ...) + 1;
-    std::unique_ptr<char[]> buf(new(std::nothrow) char[size_buf]);
-
-    if (!buf)
-        return std::string("");
-
-    std::snprintf(buf.get(), size_buf, format.c_str(), args ...);
-    return std::string(buf.get(), buf.get() + size_buf - 1);
-}
-
-// 将单帧 OBB 转换为 ByteTrack 的 Object 列表（AABB），如果你更喜欢直接调用 wrapper.Detect 已经返回 this 了。
-// 这里保留以备复用
-static void convertOBBsToObjects(const std::vector<OBBBoundingBox> &obbs, std::vector<Object> &objects)
-{
-    objects.clear();
-    for (const auto &obb : obbs)
-    {
-        std::vector<cv::Point2f> pts = obb.getCornerPoints();
-        float xmin = pts[0].x, ymin = pts[0].y, xmax = pts[0].x, ymax = pts[0].y;
-        for (int k = 1; k < 4; ++k) {
-            xmin = std::min(xmin, pts[k].x);
-            ymin = std::min(ymin, pts[k].y);
-            xmax = std::max(xmax, pts[k].x);
-            ymax = std::max(ymax, pts[k].y);
-        }
-        Object obj;
-        obj.label = static_cast<int>(obb.classIndex);
-        obj.prob = obb.confidence;
-        obj.rect.x = xmin;
-        obj.rect.y = ymin;
-        obj.rect.width = xmax - xmin;
-        obj.rect.height = ymax - ymin;
-        objects.push_back(obj);
-    }
-}
-
-// 用于绘制 OBB（仅绘制旋转矩形的四个顶点连线与中心，不绘制最小外接矩形）
-static void drawOBB(cv::Mat &img, const OBBBoundingBox &obb, const cv::Scalar &color, const std::string &text = "")
-{
-    std::vector<cv::Point2f> pts_f = obb.getCornerPoints();
+    auto pts_f = obb.getCornerPoints();
     std::vector<cv::Point> pts;
-    for (auto &p : pts_f) pts.emplace_back(cv::Point(static_cast<int>(std::round(p.x)), static_cast<int>(std::round(p.y))));
-    const cv::Point *pts_ptr = pts.data();
-    int n = static_cast<int>(pts.size());
-    // 只绘制多边形（OBB 的四条边）
-    polylines(img, &pts_ptr, &n, 1, true, color, 2);
-
-    // center
-    cv::circle(img, cv::Point(static_cast<int>(std::round(obb.cx)), static_cast<int>(std::round(obb.cy))), 3, color, -1);
-
-    // text: label + conf 或自定义 text（文本背景或边框略微调整，避免与最小外接矩形相关绘制）
-    std::string labelText = text;
-    if (labelText.empty()) {
-        if (obb.classIndex >= 0 && obb.classIndex < static_cast<int>(label->size())) {
-            char buf[64];
-            std::snprintf(buf, sizeof(buf), "%s:%.3f", label[obb.classIndex].c_str(), obb.confidence);
-            labelText = std::string(buf);
-        } else {
-            char buf[64];
-            std::snprintf(buf, sizeof(buf), "id:%ld, conf:%.3f", obb.classIndex, obb.confidence);
-            labelText = std::string(buf);
-        }
-    }
+    for (auto& p : pts_f) pts.emplace_back(cv::Point(int(std::round(p.x)), int(std::round(p.y))));
+    const cv::Point* ppt = pts.data();
+    int n = int(pts.size());
+    cv::polylines(img, &ppt, &n, 1, true, color, 2);
+    cv::circle(img, cv::Point(int(std::round(obb.cx)), int(std::round(obb.cy))),
+               3, color, -1);
+    std::string txt = text.empty()
+        ? cv::format("cls:%d %.2f", int(obb.classIndex), obb.confidence)
+        : text;
     int baseline = 0;
-    cv::Size tsize = cv::getTextSize(labelText, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
-    int tx = std::max(0, static_cast<int>(std::round(obb.cx - tsize.width/2)));
-    int ty = std::max(0, static_cast<int>(std::round(obb.cy - obb.height/2 - 6)));
-    cv::putText(img, labelText, cv::Point(tx, ty), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1);
+    cv::Size ts = cv::getTextSize(txt, cv::FONT_HERSHEY_SIMPLEX, 0.5, 1, &baseline);
+    int tx0 = std::max(0, int(std::round(obb.cx - ts.width / 2.f)));
+    int ty0 = std::max(0, int(std::round(obb.cy - obb.height / 2 - 6)));
+    cv::putText(img, txt, cv::Point(tx0, ty0), cv::FONT_HERSHEY_SIMPLEX,
+                0.5, color, 1);
 }
 
-int main(int argc, char** argv)
+/* ----------------------------------------------------------
+ * 命令行参数解析结构
+ * ---------------------------------------------------------- */
+struct Args
 {
-    if (argc != 2)
+    std::string task;               // "detect" 或 "track"
+    std::string modelPath;
+    std::string imageIn;            // 单张图或图目录
+    std::string imgOut;             // 检测/跟踪结果图保存路径（文件或目录）
+    std::string labelOut;           // 检测标签保存路径（文件或目录）
+    std::string trackImgOut;        // 仅跟踪任务时有效，可空
+    int         classNum      = 1;
+    float       confThresh    = 0.25f;
+    float       nmsThresh     = 0.45f;
+    int         modelW        = 640;
+    int         modelH        = 640;
+    int         modelBoxNum   = 8400;
+};
+
+static void printUsage(const char* prog)
+{
+    std::cout <<
+    "\nUsage:\n"
+    "  (1) 纯检测：\n"
+    "    " << prog << " detect \\\n"
+    "        --model  ../model/YOLO11s_obb_video_base_640.om \\\n"
+    "        --input  /path/to/xxx.jpg \\\n"
+    "        --image_out  /path/to/res.jpg \\\n"
+    "        --label_out  /path/to/res.txt\n\n"
+    "  (2) 检测+跟踪：\n"
+    "    " << prog << " track \\\n"
+    "        --model  ../model/YOLO11s_obb_video_base_640.om \\\n"
+    "        --input  /path/to/image_dir \\\n"
+    "        --image_out  /path/to/det_dir \\\n"
+    "        --label_out  /path/to/det_label_dir \\\n"
+    "        --track_image_out /path/to/track_dir\n\n"
+    "  可选参数：\n"
+    "    --class_num, --conf, --nms, --model_w, --model_h, --model_box_num\n";
+}
+
+static bool parseArgs(int argc, char** argv, Args& a)
+{
+    if (argc < 2) return false;
+    a.task = argv[1];
+    if (a.task != "detect" && a.task != "track") return false;
+
+    for (int i = 2; i < argc; ++i)
     {
-        fprintf(stderr, "Usage: %s [imagedir]\n", argv[0]);
-        return -1;
+        std::string key = argv[i];
+        if (key == "--model"          && i + 1 < argc) a.modelPath     = argv[++i];
+        else if (key == "--input"     && i + 1 < argc) a.imageIn       = argv[++i];
+        else if (key == "--image_out" && i + 1 < argc) a.imgOut        = argv[++i];
+        else if (key == "--label_out" && i + 1 < argc) a.labelOut      = argv[++i];
+        else if (key == "--track_image_out" && i + 1 < argc) a.trackImgOut = argv[++i];
+        else if (key == "--class_num" && i + 1 < argc) a.classNum      = std::stoi(argv[++i]);
+        else if (key == "--conf"      && i + 1 < argc) a.confThresh    = std::stof(argv[++i]);
+        else if (key == "--nms"       && i + 1 < argc) a.nmsThresh     = std::stof(argv[++i]);
+        else if (key == "--model_w"   && i + 1 < argc) a.modelW        = std::stoi(argv[++i]);
+        else if (key == "--model_h"   && i + 1 < argc) a.modelH        = std::stoi(argv[++i]);
+        else if (key == "--model_box_num" && i + 1 < argc) a.modelBoxNum = std::stoi(argv[++i]);
     }
+    return !a.modelPath.empty() && !a.imageIn.empty() &&
+           !a.imgOut.empty()   && !a.labelOut.empty();
+}
 
-    const char* imageDir = argv[1];
-
-    // 配置 inference
+/* ----------------------------------------------------------
+ * 纯检测任务（单张图 或 连续编号文件夹）
+ * ---------------------------------------------------------- */
+static void runDetect(const Args& a)
+{
     InferenceConfig cfg;
-    cfg.modelPath = "../model/YOLO11s_obb_video_base_640.om"; // 根据需要修改
-    cfg.modelWidth = 640;
-    cfg.modelHeight = 640;
-    cfg.modelOutputBoxNum = 8400;
-    cfg.classNum = 1;
-    cfg.confidenceThreshold = 0.25f;
-    cfg.nmsThreshold = 0.45f;
-    cfg.inputDir = ""; // unused here
+    cfg.modelPath      = a.modelPath;
+    cfg.modelWidth     = a.modelW;
+    cfg.modelHeight    = a.modelH;
+    cfg.modelOutputBoxNum = a.modelBoxNum;
+    cfg.classNum       = a.classNum;
+    cfg.confidenceThreshold = a.confThresh;
+    cfg.nmsThreshold   = a.nmsThresh;
 
-    // 初始化检测器（YOLO OBB）
     YoloOBBWrapper detector(cfg);
-    if (!detector.Init()) {
-        std::cerr << "Failed to initialize YOLO OBB detector." << std::endl;
-        return -1;
-    }
+    if (!detector.Init()) { std::cerr << "Init detector failed.\n"; return; }
 
-    BYTETracker tracker(30, 30);
-
-    int num_frames = 0;
-    int64_t total_us = 1; // microseconds to avoid div0
-    int64_t one_us = 0;
-
-    // track_id -> last associated OBB (用于绘制 OBB 时引用)
-    std::map<int, OBBBoundingBox> trackid2obb;
-
-    // // ensure results dir
-    // std::filesystem::create_directories("../results");
-
-    // 遍历图像序列：从 000001.jpg 开始，向上查找直到没有文件（连续编号或中断停止）
-    // 支持任意数量图片（例如 000001.jpg .. 000413.jpg 甚至更多）
-    int no = 1;
-    while (true) {
-        std::string imagePath = str_format("%s/%06d.jpg", imageDir, no);
-        if (!std::filesystem::exists(imagePath)) {
-            break;
+    /* 如果是单张图，列表只有 1 项；如果是目录，按 6 位编号扫描 */
+    std::vector<fs::path> inFiles;
+    if (fs::is_regular_file(a.imageIn))
+        inFiles.emplace_back(a.imageIn);
+    else
+    {
+        for (int no = 1; ; ++no)
+        {
+            fs::path p = fs::path(a.imageIn) / str_format("%06d.jpg", no);
+            if (!fs::exists(p)) break;
+            inFiles.push_back(p);
         }
+    }
+    if (inFiles.empty()) { std::cerr << "No input images.\n"; return; }
 
-        ++num_frames;
+    fs::create_directories(a.imgOut);
+    fs::create_directories(a.labelOut);
+
+    const cv::Scalar colors[] = {
+        {255,0,0},{0,255,0},{0,0,255},{255,255,0},{255,0,255},{0,255,255}
+    };
+
+    int64_t totalUs = 0;
+    int     done    = 0;
+
+    for (const auto& inPath : inFiles)
+    {
+        cv::Mat img = cv::imread(inPath.string());
+        if (img.empty()) continue;
 
         std::vector<OBBBoundingBox> obbs;
         std::vector<Object> objects;
-        bool ok = detector.Detect(imagePath, obbs, objects);
-        if (!ok) {
-            ACLLITE_LOG_ERROR("Detect failed for %s", imagePath.c_str());
-            ++no;
-            continue;
+        auto t0 = steady_clock::now();
+        bool ok = detector.Detect(inPath.string(), obbs, objects);
+        auto t1 = steady_clock::now();
+        if (!ok) continue;
+
+        int64_t us = duration_cast<microseconds>(t1 - t0).count();
+        totalUs += us;
+        ++done;
+
+        /* 画框 */
+        cv::Mat res = img.clone();
+        for (const auto& o : obbs)
+            drawOBB(res, o, colors[o.classIndex % 6]);
+
+        /* 输出文件：与输入同名 */
+        fs::path outImg   = fs::path(a.imgOut)   / (inPath.stem().string() + ".jpg");
+        fs::path outLabel = fs::path(a.labelOut) / (inPath.stem().string() + ".txt");
+
+        cv::imwrite(outImg.string(), res);
+
+        std::ofstream fo(outLabel.string());
+        for (const auto& o : obbs)
+        {
+            auto pts = o.getCornerPoints();
+            fo << o.classIndex << ' ' << o.confidence;
+            for (const auto& p : pts) fo << ' ' << p.x << ' ' << p.y;
+            fo << '\n';
         }
-
-        // 调用 tracker
-        auto t0 = std::chrono::steady_clock::now();
-        std::vector<STrack> output_stracks = tracker.update(objects);
-        auto t1 = std::chrono::steady_clock::now();
-        one_us = std::chrono::duration_cast<std::chrono::microseconds>(t1 - t0).count();
-        std::cout << "Frame " << no << " Detect objects " << objects.size() << ", Tracking update takes " << one_us << " us" << std::endl;
-        total_us += one_us;
-
-        // 将输出 stracks 的 track_id 与检测到的 obb 做关联：
-        // 对于每个 track，找与其 AABB（tlwh） IoU 最大的 obb（AABB）并绑定（如果 IoU > 0）
-        trackid2obb.clear();
-        for (const auto &trk : output_stracks) {
-            float bestIou = 0.0f;
-            int bestIdx = -1;
-            std::vector<float> tlwh = trk.tlwh;
-            cv::Rect2f aabb_t(tlwh[0], tlwh[1], tlwh[2], tlwh[3]);
-            for (size_t k = 0; k < obbs.size(); ++k) {
-                std::vector<cv::Point2f> pts = obbs[k].getCornerPoints();
-                float xmin = pts[0].x, ymin = pts[0].y, xmax = pts[0].x, ymax = pts[0].y;
-                for (int p=1; p<4; ++p) { xmin = std::min(xmin, pts[p].x); ymin = std::min(ymin, pts[p].y); xmax = std::max(xmax, pts[p].x); ymax = std::max(ymax, pts[p].y); }
-                cv::Rect2f aabb_o(xmin, ymin, xmax - xmin, ymax - ymin);
-                // IoU
-                float interW = std::max(0.0f, std::min(aabb_t.x + aabb_t.width, aabb_o.x + aabb_o.width) - std::max(aabb_t.x, aabb_o.x));
-                float interH = std::max(0.0f, std::min(aabb_t.y + aabb_t.height, aabb_o.y + aabb_o.height) - std::max(aabb_t.y, aabb_o.y));
-                float interArea = interW * interH;
-                float unionArea = aabb_t.width * aabb_t.height + aabb_o.width * aabb_o.height - interArea + 1e-6f;
-                float iou = interArea / unionArea;
-                if (iou > bestIou) {
-                    bestIou = iou;
-                    bestIdx = static_cast<int>(k);
-                }
-            }
-            if (bestIdx >= 0 && bestIou > 0.0f) {
-                trackid2obb[trk.track_id] = obbs[bestIdx];
-            }
-        }
-
-        // 读取图片用于绘制
-        cv::Mat img = cv::imread(imagePath);
-        if (img.empty()) {
-            ACLLITE_LOG_ERROR("Read image failed: %s", imagePath.c_str());
-            ++no;
-            continue;
-        }
-
-        // 绘制检测到的 OBB（仅 OBB，不绘制最小外接矩形）
-        const std::vector<cv::Scalar> colors = {
-            cv::Scalar(255, 0, 0), cv::Scalar(0, 255, 0), cv::Scalar(0, 0, 255),
-            cv::Scalar(255, 255, 0), cv::Scalar(255, 0, 255), cv::Scalar(0, 255, 255)
-        };
-
-        for (size_t k = 0; k < obbs.size(); ++k) {
-            cv::Scalar c = colors[obbs[k].classIndex % colors.size()];
-            // draw OBB only
-            drawOBB(img, obbs[k], c);
-        }
-
-        // 绘制跟踪结果：只绘制 track id 文本 与 （若有）对应 OBB（绘制 OBB 更醒目）
-        // 不绘制 AABB（最小外接矩形）
-        for (size_t i = 0; i < output_stracks.size(); ++i) {
-            int tid = output_stracks[i].track_id;
-            cv::Scalar color = tracker.get_color(tid);
-
-            // 仅绘制 ID 文本；若需要在 ID 附近放置文本，则使用 track 的 tlwh 的中心
-            std::vector<float> tlwh = output_stracks[i].tlwh;
-            int cx = static_cast<int>(tlwh[0] + tlwh[2] / 2.0f);
-            int cy = static_cast<int>(tlwh[1] + tlwh[3] / 2.0f);
-            cv::putText(img, cv::format("%d", tid), cv::Point(std::max(0, cx - 10), std::max(0, cy)), 0, 0.6, color, 2, cv::LINE_AA);
-
-            auto it = trackid2obb.find(tid);
-            if (it != trackid2obb.end()) {
-                // draw OBB with thicker line and label
-                drawOBB(img, it->second, color, std::string("ID:") + std::to_string(tid));
-            }
-        }
-
-        // 绘制帧信息和 FPS
-        int fps = static_cast<int>(num_frames * 1'000'000LL / total_us);
-        cv::putText(img, cv::format("frame: %d fps: %d num: %d", num_frames, fps, (int)output_stracks.size()),
-                    cv::Point(0, 30), 0, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
-
-        // 保存结果图像
-        std::string outPath = str_format("../output_obb_track/%06d.jpg", no);
-        cv::imwrite(outPath, img);
-
-        ++no;
     }
 
-    std::cout << "Processed frames: " << num_frames << std::endl;
-    std::cout << "FPS: " << (num_frames * 1000000LL / total_us) << std::endl;
+    if (done == 0) { std::cerr << "No frame processed.\n"; return; }
 
+    double fps = done * 1'000'000.0 / totalUs;
+    std::cout << "[Detect] 平均 FPS = " << fps
+              << "  (共 " << done << " 张，总耗时 "
+              << totalUs / 1000 << " ms)\n";
+}
+
+/* ----------------------------------------------------------
+ * 检测+跟踪任务（连续编号图像序列）
+ * ---------------------------------------------------------- */
+static void runTrack(const Args& a)
+{
+    InferenceConfig cfg;
+    cfg.modelPath = a.modelPath;
+    cfg.modelWidth = a.modelW; cfg.modelHeight = a.modelH;
+    cfg.modelOutputBoxNum = a.modelBoxNum;
+    cfg.classNum = a.classNum;
+    cfg.confidenceThreshold = a.confThresh;
+    cfg.nmsThreshold = a.nmsThresh;
+
+    YoloOBBWrapper detector(cfg);
+    if (!detector.Init()) { std::cerr << "Init detector failed.\n"; return; }
+
+    BYTETracker tracker(30, 30);
+
+    fs::create_directories(a.imgOut);
+    fs::create_directories(a.labelOut);
+    if (!a.trackImgOut.empty()) fs::create_directories(a.trackImgOut);
+
+    int64_t totalDetUs = 0, totalTrkUs = 0;
+    int frameCnt = 0;
+
+    for (int no = 1; ; ++no)
+    {
+        std::string imgPath = str_format("%s/%06d.jpg", a.imageIn.c_str(), no);
+        if (!fs::exists(imgPath)) break;
+        ++frameCnt;
+
+        cv::Mat img = cv::imread(imgPath);
+        if (img.empty()) continue;
+
+        /* ---- detect ---- */
+        std::vector<OBBBoundingBox> obbs; std::vector<Object> objects;
+        auto t0 = steady_clock::now();
+        bool ok = detector.Detect(imgPath, obbs, objects);
+        auto t1 = steady_clock::now();
+        if (!ok) continue;
+        int64_t detUs = duration_cast<microseconds>(t1 - t0).count();
+        totalDetUs += detUs;
+
+        /* ---- track ---- */
+        t0 = steady_clock::now();
+        std::vector<STrack> stracks = tracker.update(objects);
+        t1 = steady_clock::now();
+        int64_t trkUs = duration_cast<microseconds>(t1 - t0).count();
+        totalTrkUs += trkUs;
+
+        /* 关联 obb -> track_id */
+        std::map<int, OBBBoundingBox> tid2obb;
+        for (const auto& trk : stracks)
+        {
+            float bestIou = 0; int bestIdx = -1;
+            cv::Rect2f r1(trk.tlwh[0], trk.tlwh[1], trk.tlwh[2], trk.tlwh[3]);
+            for (size_t k = 0; k < obbs.size(); ++k)
+            {
+                auto pts = obbs[k].getCornerPoints();
+                float xmi = pts[0].x, ymi = pts[0].y, xma = pts[0].x, yma = pts[0].y;
+                for (int p = 1; p < 4; ++p)
+                { xmi = std::min(xmi, pts[p].x); ymi = std::min(ymi, pts[p].y);
+                  xma = std::max(xma, pts[p].x); yma = std::max(yma, pts[p].y); }
+                cv::Rect2f r2(xmi, ymi, xma - xmi, yma - ymi);
+                float inter = (r1 & r2).area();
+                float u = r1.area() + r2.area() - inter + 1e-6f;
+                float iou = inter / u;
+                if (iou > bestIou) { bestIou = iou; bestIdx = int(k); }
+            }
+            if (bestIdx >= 0 && bestIou > 0) tid2obb[trk.track_id] = obbs[bestIdx];
+        }
+
+        /* 保存检测图/标签 */
+        const cv::Scalar colors[] = {
+            {255,0,0},{0,255,0},{0,0,255},{255,255,0},{255,0,255},{0,255,255}
+        };
+        cv::Mat detImg = img.clone();
+        for (const auto& o : obbs) drawOBB(detImg, o, colors[o.classIndex % 6]);
+        cv::imwrite(str_format("%s/%06d.jpg", a.imgOut.c_str(), no), detImg);
+
+        std::ofstream folab(str_format("%s/%06d.txt", a.labelOut.c_str(), no));
+        for (const auto& o : obbs)
+        {
+            auto pts = o.getCornerPoints();
+            folab << o.classIndex << ' ' << o.confidence;
+            for (const auto& p : pts) folab << ' ' << p.x << ' ' << p.y;
+            folab << '\n';
+        }
+
+        /* 保存跟踪图（可选） */
+        if (!a.trackImgOut.empty())
+        {
+            cv::Mat trkImg = img.clone();
+            for (const auto& trk : stracks)
+            {
+                cv::Scalar color = tracker.get_color(trk.track_id);
+                int cx = int(trk.tlwh[0] + trk.tlwh[2] / 2);
+                int cy = int(trk.tlwh[1] + trk.tlwh[3] / 2);
+                cv::putText(trkImg, cv::format("%d", trk.track_id),
+                            cv::Point(cx - 10, cy), 0, 0.6, color, 2, cv::LINE_AA);
+                auto it = tid2obb.find(trk.track_id);
+                if (it != tid2obb.end())
+                    drawOBB(trkImg, it->second, color, cv::format("ID:%d", trk.track_id));
+            }
+            cv::imwrite(str_format("%s/%06d.jpg", a.trackImgOut.c_str(), no), trkImg);
+        }
+    }
+
+    if (frameCnt == 0) { std::cerr << "No frame processed.\n"; return; }
+
+    double fpsDet = frameCnt * 1'000'000.0 / totalDetUs;
+    double fpsTrk = frameCnt * 1'000'000.0 / totalTrkUs;
+    std::cout << "[Track] 检测模块平均 FPS = " << fpsDet
+              << "  |  跟踪模块平均 FPS = " << fpsTrk << '\n';
+}
+
+/* ----------------------------------------------------------
+ * main
+ * ---------------------------------------------------------- */
+int main(int argc, char** argv)
+{
+    Args a;
+    if (!parseArgs(argc, argv, a)) { printUsage(argv[0]); return -1; }
+
+    if (a.task == "detect") runDetect(a);
+    else                    runTrack(a);
     return 0;
 }

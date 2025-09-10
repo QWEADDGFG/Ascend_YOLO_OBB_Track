@@ -1,0 +1,23 @@
+======================================
+ Run started at Wed Sep 10 14:41:27 CST 2025
+======================================
+[INFO] 开始推理...
+[INFO]  Acl init ok
+[INFO]  Open device 0 ok
+[INFO]  Use default context currently
+[INFO]  dvpp init resource ok
+[INFO]  Load model ../model/YOLO11s_obb_video_base_640.om success
+[INFO]  Create model description success
+[INFO]  Create model(../model/YOLO11s_obb_video_base_640.om) output success
+[INFO]  Init model ../model/YOLO11s_obb_video_base_640.om success
+[INFO]  Model initialized successfully
+[INFO]  Input size: 640x640
+[INFO]  Output boxes: 8400
+[INFO]  Classes: 1
+[INFO]  Using ProbIoU for NMS processing
+[Detect] 平均 FPS = 38.3284  (共 413 张，总耗时 10775 ms)
+[INFO]  Unload model ../model/YOLO11s_obb_video_base_640.om success
+[INFO]  destroy context ok
+[INFO]  Reset device 0 ok
+[INFO]  Finalize acl ok
+[INFO] 推理完成.
