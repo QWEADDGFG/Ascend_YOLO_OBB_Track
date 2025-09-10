@@ -160,7 +160,7 @@ static void drawOBB(cv::Mat &img, const OBBBoundingBox &obb, const cv::Scalar &c
             labelText = std::string(buf);
         } else {
             char buf[64];
-            std::snprintf(buf, sizeof(buf), "id:%d conf:%.3f", obb.classIndex, obb.confidence);
+            std::snprintf(buf, sizeof(buf), "id:%ld, conf:%.3f", obb.classIndex, obb.confidence);
             labelText = std::string(buf);
         }
     }
@@ -183,7 +183,7 @@ int main(int argc, char** argv)
 
     // 配置 inference
     InferenceConfig cfg;
-    cfg.modelPath = "/home/HwHiAiUser/gp/YOLO_OBB_Track/build/test0909.om"; // 根据需要修改
+    cfg.modelPath = "../model/YOLO11s_obb_video_base_640.om"; // 根据需要修改
     cfg.modelWidth = 640;
     cfg.modelHeight = 640;
     cfg.modelOutputBoxNum = 8400;
@@ -209,7 +209,7 @@ int main(int argc, char** argv)
     std::map<int, OBBBoundingBox> trackid2obb;
 
     // ensure results dir
-    std::filesystem::create_directories("results");
+    std::filesystem::create_directories("../results");
 
     // 遍历图像序列：从 000001.jpg 开始，向上查找直到没有文件（连续编号或中断停止）
     // 支持任意数量图片（例如 000001.jpg .. 000413.jpg 甚至更多）
@@ -217,8 +217,6 @@ int main(int argc, char** argv)
     while (true) {
         std::string imagePath = str_format("%s/%06d.jpg", imageDir, no);
         if (!std::filesystem::exists(imagePath)) {
-            // 如果当前不存在，尝试查找下一个编号直到连续的 N 个 失踪后退出？
-            // 为简单起见，遇到第一个缺失文件就结束处理（如果需要跳过缺失可修改此处逻辑）
             break;
         }
 
@@ -315,7 +313,7 @@ int main(int argc, char** argv)
                     cv::Point(0, 30), 0, 0.6, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
 
         // 保存结果图像
-        std::string outPath = str_format("results/%06d.jpg", no);
+        std::string outPath = str_format("../results/%06d.jpg", no);
         cv::imwrite(outPath, img);
 
         ++no;
