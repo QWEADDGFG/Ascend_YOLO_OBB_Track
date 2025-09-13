@@ -1,21 +1,29 @@
 # YOLO_OBB_Track
-YOLO_OBB_Track
+
+项目使用 C++17 和 C11 标准，启用了 DVPP 接口支持，并设置了发布版本的编译优化选项。
+
+该配置文件依赖 Eigen3 数学库和 OpenCV 计算机视觉库，并通过环境变量（DDK_PATH、NPU_HOST_LIB、THIRDPART_PATH）自动检测昇腾开发套件的安装路径，如果环境变量未设置则使用默认路径。项目包含了昇腾运行时库的头文件和链接库路径，最终生成的可执行文件由 main_all.cpp 和 src 目录下的所有 cpp 源文件编译而成，链接了 Eigen、OpenCV 以及昇腾相关的核心库（ascendcl、acl_dvpp、acllite 等），用于在昇腾 NPU 上运行 YOLO 算法进行旋转框目标检测和跟踪任务。
 
 ## 数据集
+
 1. [路径：]/home/HwHiAiUser/gp/DATASETS/test0909/imgs_640
+
 2. [预处理：]/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/resize.py
 图像预处理工具，其核心功能是将指定源目录 (SRC_DIR) 中的所有支持的图像文件（如JPG, PNG等）进行批量处理。
 对于每张图像，它会先将其转换为RGB格式，然后等比例缩放，使其最长边不超过目标尺寸（默认为640x640）。
 接着，它会将缩放后的图像居中放置在一个新的640x640的画布上，画布的空白区域则用YOLO模型常用的中性灰边 (114, 114, 114) 进行填充。
 最终，处理后的图像将以JPEG格式（质量95）保存到指定的输出目录 (DST_DIR)。
+
 3. 目的：将指定目录中的图像批量处理为YOLO_OBB_Track模型所需的输入格式（640*640尺寸与Baseline JPEG格式）。
 某些库（如老旧 OpenCV、嵌入式系统）不支持Progressive JPEG 。
 
 ## 编译：
+
 ```bash
 mkdir build
 ./run_build.sh
 ```
+
 ```shell
 [INFO] 开始编译源代码...
 -- The C compiler identification is GNU 11.3.0
@@ -49,8 +57,6 @@ mkdir build
 [100%] Built target yolo_obb_track
 [INFO] 编译完成.
 ```
-
-
 ## 运行推理：
 
 1. 
