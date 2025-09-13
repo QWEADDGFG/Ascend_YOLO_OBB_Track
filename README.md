@@ -185,3 +185,211 @@ main_all.cpp
 - 模型尺寸（宽高，与输入图像尺寸一致）
 - 类别数量、置信度阈值、NMS阈值
 - 模型输出框数量
+
+### 3.2 YOLO OBB实现
+```c++
+#ifndef YOLO_OBB_H
+#define YOLO_OBB_H
+
+//#include ***
+
+using namespace std;
+using namespace cv;
+
+extern const string label[];
+
+#if __cplusplus < 201402L
+namespace std
+{
+    template <typename T, typename... Args>
+    unique_ptr<T> make_unique(Args &&...args)
+    {
+        return unique_ptr<T>(new T(forward<Args>(args)...));
+    }
+}
+#endif
+
+#ifndef MODEL_ANGLE_MODE
+#define MODEL_ANGLE_MODE 0
+#endif
+
+struct OBBBoundingBox // 旋转框结构体-包含了OBB中心点坐标、宽高、角度、置信度、类别索引、索引
+{
+    float cx, cy, width, height;
+    float angle;
+    float confidence;
+    size_t classIndex;
+    size_t index;
+
+    vector<cv::Point2f> getCornerPoints() const;
+    OBBBoundingBox();
+};
+
+class InferenceConfig // 模型推理配置参数
+{
+public:
+    string modelPath;
+    string inputDir;
+    string outputImgDir;
+    string outputTxtDir;
+    int32_t modelWidth;
+    int32_t modelHeight;
+    float confidenceThreshold;
+    float nmsThreshold;
+    size_t modelOutputBoxNum;
+    size_t classNum;
+
+    InferenceConfig();
+};
+
+class Utils // 工具类
+{
+public:
+    static bool sortByConfidence(const OBBBoundingBox &a, const OBBBoundingBox &b);
+    static void createDirectory(const string &path);
+    static vector<string> getImagePaths(const string &dirPath);
+    static string getFileNameWithoutExt(const string &path);
+    static float normalizeAngle(float angle);
+};
+
+class OBBPostProcessor // OBB后处理器
+{
+private:
+    size_t modelOutputBoxNum_;
+    size_t classNum_;
+
+public:
+    OBBPostProcessor(size_t boxNum, size_t classNum);
+    vector<OBBBoundingBox> parseOutput(float *outputData, size_t outputSize,
+                                       int srcWidth, int srcHeight,
+                                       int modelWidth, int modelHeight,
+                                       float confidenceThreshold);
+};
+
+class OBBNMSProcessor // OBB NMS 处理器
+{
+private:
+    static std::tuple<float, float, float> getCovarianceMatrix(const OBBBoundingBox &box);
+
+public:
+    static float calculateProbIOU(const OBBBoundingBox &box1, const OBBBoundingBox &box2,
+                                  bool useCIoU = false, float eps = 1e-7f);
+    static float calculateOBBIOU(const OBBBoundingBox &box1, const OBBBoundingBox &box2);
+    static vector<OBBBoundingBox> applyNMS(vector<OBBBoundingBox> &boxes,
+                                           float nmsThreshold);
+};
+
+class OBBResultSaver // OBB 结果保存器
+{
+public:
+    static void saveResults(const vector<OBBBoundingBox> &boxes,
+                            const string &imagePath,
+                            const string &outputImgDir,
+                            const string &outputTxtDir,
+                            int srcWidth, int srcHeight);
+
+private:
+    static void saveTxtFile(const vector<OBBBoundingBox> &boxes,
+                            const string &txtPath, int srcWidth, int srcHeight);
+    static void saveVisualization(const vector<OBBBoundingBox> &boxes,
+                                  const string &imagePath,
+                                  const string &outputPath);
+};
+
+
+class YOLOOBBInference // YOLO OBB 推理类
+{
+public:
+    YOLOOBBInference(const InferenceConfig &config);
+    ~YOLOOBBInference();
+
+    bool initialize();
+    void runInference();
+
+    // 公开接口（顺序： preprocess/preprocessImage -> runModelInference -> postprocessResults）
+    bool processImage(const string &imagePath);
+    bool preprocessImage(const string &imagePath);
+    bool runModelInference(vector<InferenceOutput> &inferOutputs);
+    bool postprocessResults(vector<InferenceOutput> &inferOutputs, const string &imagePath);
+
+private:
+    InferenceConfig config_;
+    AclLiteResource aclResource_;
+    AclLiteImageProc imageProcess_;
+    AclLiteModel model_;
+    aclrtRunMode runMode_;
+    ImageData resizedImage_;
+    unique_ptr<OBBPostProcessor> postProcessor_;
+
+    void releaseResources();
+};
+#endif // YOLO_OBB_H
+```
+
+```c++
+// 
+float OBBNMSProcessor::calculateProbIOU(const OBBBoundingBox &box1, const OBBBoundingBox &box2,
+                                        bool useCIoU, float eps)
+{
+    float x1 = box1.cx;
+    float y1 = box1.cy;
+    float x2 = box2.cx;
+    float y2 = box2.cy;
+
+    std::tuple<float, float, float> cov1 = getCovarianceMatrix(box1);
+    std::tuple<float, float, float> cov2 = getCovarianceMatrix(box2);
+
+    float a1 = std::get<0>(cov1);
+    float b1 = std::get<1>(cov1);
+    float c1 = std::get<2>(cov1);
+
+    float a2 = std::get<0>(cov2);
+    float b2 = std::get<1>(cov2);
+    float c2 = std::get<2>(cov2);
+
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+
+    float denom_a = (a1 + a2);
+    float denom_b = (b1 + b2);
+    float denom_c = (c1 + c2);
+    float denominator = denom_a * denom_b - denom_c * denom_c + eps;
+
+    float t1 = ((denom_a * dy * dy + denom_b * dx * dx) / denominator) * 0.25f;
+    float t2 = ((denom_c * dx * dy) / denominator) * 0.5f;
+
+    float det1 = std::max(a1 * b1 - c1 * c1, 0.0f);
+    float det2 = std::max(a2 * b2 - c2 * c2, 0.0f);
+    float sqrt_dets = std::sqrt(det1 * det2) + eps;
+    float t3_inner = denominator / (4.0f * sqrt_dets) + eps;
+    float t3 = 0.5f * std::log(t3_inner);
+
+    float bd = t1 + t2 + t3;
+    bd = std::max(eps, std::min(bd, 100.0f));
+
+    float hd = std::sqrt(1.0f - std::exp(-bd) + eps);
+    float iou = 1.0f - hd;
+    if (iou < 0.0f)
+        iou = 0.0f;
+    if (iou > 1.0f)
+        iou = 1.0f;
+
+    if (useCIoU)
+    {
+        float w1 = box1.width;
+        float h1 = box1.height;
+        float w2 = box2.width;
+        float h2 = box2.height;
+        float aspect1 = std::atan2(w1, h1);
+        float aspect2 = std::atan2(w2, h2);
+        float v = (4.0f / (M_PI * M_PI)) * (aspect2 - aspect1) * (aspect2 - aspect1);
+        float alpha = v / (v + 1.0f - iou + eps);
+        return iou - alpha * v;
+    }
+
+    return iou;
+}
+
+
+```
+### 3.3 BYTETracker实现
