@@ -4,8 +4,22 @@
 
 该配置文件依赖 Eigen3 数学库和 OpenCV 计算机视觉库，并通过环境变量（DDK_PATH、NPU_HOST_LIB、THIRDPART_PATH）自动检测昇腾开发套件的安装路径，如果环境变量未设置则使用默认路径。项目包含了昇腾运行时库的头文件和链接库路径，最终生成的可执行文件由 main_all.cpp 和 src 目录下的所有 cpp 源文件编译而成，链接了 Eigen、OpenCV 以及昇腾相关的核心库（ascendcl、acl_dvpp、acllite 等），用于在昇腾 NPU 上运行 YOLO 算法进行旋转框目标检测和跟踪任务。
 
-## 数据集
+## 1. 环境准备、数据集与模型准备
 
+### 1.1 环境准备
+```bash
+npu-smi info
++--------------------------------------------------------------------------------------------------------+
+| npu-smi 23.0.rc3                                 Version: 23.0.rc3                                     |
++-------------------------------+-----------------+------------------------------------------------------+
+| NPU     Name                  | Health          | Power(W)     Temp(C)           Hugepages-Usage(page) |
+| Chip    Device                | Bus-Id          | AICore(%)    Memory-Usage(MB)                        |
++===============================+=================+======================================================+
+| 0       310B1                 | OK              | 8.9          54                15    / 15            |
+| 0       0                     | NA              | 0            4974 / 11577                            |
++===============================+=================+======================================================+
+```
+### 1.2 数据集准备
 1. [路径：]/home/HwHiAiUser/gp/DATASETS/test0909/imgs_640
 
 2. [预处理：]/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/resize.py
@@ -17,7 +31,43 @@
 3. 目的：将指定目录中的图像批量处理为YOLO_OBB_Track模型所需的输入格式（640*640尺寸与Baseline JPEG格式）。
 某些库（如老旧 OpenCV、嵌入式系统）不支持Progressive JPEG 。
 
-## 编译：
+### 1.3 模型准备
+1. onnx获取
+
+```python
+import warnings
+warnings.filterwarnings('ignore')
+from ultralytics import YOLO
+
+# onnx onnxsim onnxruntime onnxruntime-gpu
+
+# 导出参数官方详解链接：https://docs.ultralytics.com/modes/export/#usage-examples
+
+if __name__ == '__main__':
+    model = YOLO('/data/gy/gp/Huawei/yolo11obb/runs/train/yolo11sobb_MVRSD2/weights/best.pt')
+    model.export(format='onnx', simplify=True, opset=11, dynamic=True, imgsz=640, nms=False)
+```
+
+2. onnx转换为om
+
+```shell
+atc --model=YOLO11n_p2_hbb_IRSTD_1K_512.onnx --framework=5 --output=YOLO11n_p2_hbb_IRSTD_1K_512 --input_shape="images:1,3,512,512"  --soc_version=Ascend310B1  --insert_op_conf=aipp512.cfg
+```
+```shell
+atc --model=YOLO11s_base_obb_MVRSD_640.onnx --framework=5 --output=YOLO11s_base_obb_MVRSD_640 --input_shape="images:1,3,640,640"  --soc_version=Ascend310B1  --insert_op_conf=aipp640.cfg
+```
+```shell
+atc --model=yolov8n.onnx --framework=5 --output=yolov8n --input_shape="images:1,3,640,640"  --soc_version=Ascend310B1  --insert_op_conf=aipp.cfg
+```
+```shell
+atc --model=test0909.onnx --framework=5 --output=test0909 --input_shape="images:1,3,640,640"  --soc_version=Ascend310B1  --insert_op_conf=aipp640.cfg
+```
+aipp.cfg做了三件事：
+1. YUV420SP → RGB 颜色空间转换；
+2. 裁剪成 640×640；
+3. 归一化到 [0,1]（通过除以 255）
+
+## 2.编译：
 
 ```bash
 mkdir build
@@ -91,3 +141,4 @@ cd build
     --track_image_out ../results/imgs_track 
 
 ```
+## 代码结构
