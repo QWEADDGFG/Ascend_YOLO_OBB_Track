@@ -8,6 +8,8 @@ YOLO_OBB_Track
 ```bash
 mkdir build
 ./run_build.sh
+```
+```shell
 [INFO] 开始编译源代码...
 -- The C compiler identification is GNU 11.3.0
 -- The CXX compiler identification is GNU 11.3.0
