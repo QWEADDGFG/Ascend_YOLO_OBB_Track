@@ -1,5 +1,5 @@
 ======================================
- Run started at Wed Sep 10 14:40:13 CST 2025
+ Run started at Sat Sep 13 21:57:57 CST 2025
 ======================================
 [INFO] 开始推理...
 [INFO]  Acl init ok
@@ -15,7 +15,7 @@
 [INFO]  Output boxes: 8400
 [INFO]  Classes: 1
 [INFO]  Using ProbIoU for NMS processing
-[Detect] 平均 FPS = 37.1264  (共 1 张，总耗时 26 ms)
+[Detect] 平均 FPS = 38.5939  (共 413 张，总耗时 10701 ms)
 [INFO]  Unload model ../model/YOLO11s_obb_video_base_640.om success
 [INFO]  destroy context ok
 [INFO]  Reset device 0 ok

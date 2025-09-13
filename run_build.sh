@@ -1,5 +1,5 @@
 #!/bin/bash
-# chmod +x run_compile.sh
+# chmod +x run_build.sh
 set -e  # 遇到错误立即退出
 
 echo "[INFO] 开始编译源代码..."

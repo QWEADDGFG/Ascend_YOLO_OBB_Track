@@ -24,9 +24,9 @@ cd ./build
 
 # ./yolo_obb_track detect \
 #     --model ../model/YOLO11s_obb_video_base_640.om \
-#     --input  /home/HwHiAiUser/gp/DATASETS/test0909/imgs_640/000001.jpg \
-#     --image_out  ../results/imgs \
-#     --label_out  ../results/txts
+#     --input  /home/HwHiAiUser/gp/DATASETS/test0909/imgs_640/000002.jpg \
+#     --image_out  ../results/imgs_01 \
+#     --label_out  ../results/txts_01
 
 # ./yolo_obb_track detect \
 #     --model ../model/YOLO11s_obb_video_base_640.om \
