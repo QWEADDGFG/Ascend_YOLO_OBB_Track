@@ -2,14 +2,13 @@
 YOLO_OBB_Track
 
 ## 数据集
-[路径：]/home/HwHiAiUser/gp/DATASETS/test0909/imgs_640
-[预处理：]/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/resize.py
+1. [路径：]/home/HwHiAiUser/gp/DATASETS/test0909/imgs_640
+2. [预处理：]/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/resize.py
 图像预处理工具，其核心功能是将指定源目录 (SRC_DIR) 中的所有支持的图像文件（如JPG, PNG等）进行批量处理。
 对于每张图像，它会先将其转换为RGB格式，然后等比例缩放，使其最长边不超过目标尺寸（默认为640x640）。
 接着，它会将缩放后的图像居中放置在一个新的640x640的画布上，画布的空白区域则用YOLO模型常用的中性灰边 (114, 114, 114) 进行填充。
 最终，处理后的图像将以JPEG格式（质量95）保存到指定的输出目录 (DST_DIR)。
-
-目的：将指定目录中的图像批量处理为YOLO_OBB_Track模型所需的输入格式（640*640尺寸与Baseline JPEG格式）。
+3. 目的：将指定目录中的图像批量处理为YOLO_OBB_Track模型所需的输入格式（640*640尺寸与Baseline JPEG格式）。
 某些库（如老旧 OpenCV、嵌入式系统）不支持Progressive JPEG 。
 
 ## 编译：
