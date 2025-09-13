@@ -1,9 +1,9 @@
 # YOLO_OBB_Track
 YOLO_OBB_Track
 
-## 数据集路径
-/home/HwHiAiUser/gp/DATASETS/test0909/imgs_640
-
+## 数据集
+[路径：]/home/HwHiAiUser/gp/DATASETS/test0909/imgs_640
+[预处理：]/home/HwHiAiUser/gp/Ascend_YOLO_OBB_Track/resize.py
 图像预处理工具，其核心功能是将指定源目录 (SRC_DIR) 中的所有支持的图像文件（如JPG, PNG等）进行批量处理。
 对于每张图像，它会先将其转换为RGB格式，然后等比例缩放，使其最长边不超过目标尺寸（默认为640x640）。
 接着，它会将缩放后的图像居中放置在一个新的640x640的画布上，画布的空白区域则用YOLO模型常用的中性灰边 (114, 114, 114) 进行填充。
